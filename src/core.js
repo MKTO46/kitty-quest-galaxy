@@ -56,6 +56,7 @@ export function logSet(state,day,now=Date.now()) {
   state.recovery={end:w.done?0:now+state.rest*1000,day}; checkDay(state,day);return true;
 }
 export function stopWorkout(state,day,now=Date.now()) { const w=workout(state,day); if(!w.done){w.stopped=true;w.finishedAt=new Date(now).toISOString();}state.recovery={end:0};checkDay(state,day); }
+export function resumeWorkout(state,day) { const w=workout(state,day); if(!w.done && w.items.length){w.stopped=false;delete w.finishedAt;}return !w.done; }
 export function moreRest(state,now=Date.now()) {state.recovery.end=Math.max(now,state.recovery.end || 0)+state.rest*1000;}
 export function ready(state){state.recovery.end=0;}
 export function runChoice(day) {
