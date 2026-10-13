@@ -1,4 +1,4 @@
-const VERSION='kitty-quest-galaxy-missions-v5';
+const VERSION='kitty-quest-galaxy-reverse-ladder-v6';
 const ASSETS=['./','./index.html','./manifest.webmanifest','./src/app.js','./src/core.js','./src/storage.js','./icons/icon-192.png','./icons/icon-512.png','./icons/maskable-512.png'];
 self.addEventListener('install',event=>event.waitUntil(caches.open(VERSION).then(cache=>cache.addAll(ASSETS))));
 self.addEventListener('activate',event=>event.waitUntil((async()=>{for(const key of await caches.keys())if(key.startsWith('kitty-quest-galaxy-')&&key!==VERSION)await caches.delete(key);await self.clients.claim();})()));
