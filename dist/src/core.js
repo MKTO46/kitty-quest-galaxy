@@ -33,12 +33,13 @@ export function migrate(input) {
   return state;
 }
 export function workout(state, day) {
-  return state.workouts[day] ||= {day,index:0,stage:0,round:1,extra:0,done:false,stopped:false,items:profile(day).items};
+  return state.workouts[day] ||= {day,index:0,stage:0,round:1,extra:0,done:false,stopped:false,items:profile(day).items,ladderVersion:2};
 }
 export function nextSet(state,day) {
   const w=workout(state,day); if(w.done || w.stopped || !w.items.length) return null;
-  const name=w.items[w.index], stage=STAGES[w.stage], weight=(state.weights[name] || DEFAULTS[name] || {easy:0,master:0,challenge:0})[stage];
-  return {name,stage,target:TARGETS[w.stage],actual:Math.max(0,TARGETS[w.stage]+w.extra),weight};
+  const stages=w.ladderVersion===2?STAGES:LEGACY_STAGES,targets=w.ladderVersion===2?TARGETS:LEGACY_TARGETS;
+  const name=w.items[w.index], stage=stages[w.stage], weight=(state.weights[name] || DEFAULTS[name] || {easy:0,master:0,challenge:0})[stage];
+  return {name,stage,target:targets[w.stage],actual:Math.max(0,targets[w.stage]+w.extra),weight};
 }
 export function adjustRep(state,day,delta) { const w=workout(state,day); const x=nextSet(state,day); if(x)w.extra=Math.max(-x.target,Math.min(100,w.extra+delta)); }
 export function adjustWeight(state,day,delta) {
