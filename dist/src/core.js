@@ -16,12 +16,13 @@ const PROFILES = [
 ];
 export function profile(day) { return structuredClone(PROFILES[dayDate(day).getDay()]); }
 export const DEFAULTS = {'Lat Pulldown':{easy:55,master:70,challenge:80},'Low Row':{easy:40,master:55,challenge:65},'Chest Press':{easy:20,master:25,challenge:30},'Incline Press':{easy:15,master:20,challenge:25},'Lateral Raise':{easy:5,master:8,challenge:10},'Rear Delt Fly':{easy:5,master:8,challenge:10},'Biceps Curl':{easy:10,master:15,challenge:20},'Hammer Curl':{easy:10,master:15,challenge:20},'Triceps Pressdown':{easy:15,master:20,challenge:25},'Cable Crunch':{easy:15,master:20,challenge:25},'Pallof Press':{easy:10,master:12,challenge:15},'Dead Bug':{easy:0,master:0,challenge:0},'Assisted Pull-up':{easy:150,master:145,challenge:140}};
-export function freshState() { return {schema:2,weights:{},confirmed:{},sets:[],runs:[],completed:{},workouts:{},runSession:null,recovery:{end:0},timer:{remaining:90,end:0,running:false},recapSeen:{},skillMilestones:{},skillProgress:{},rest:90}; }
+export function freshState() { return {schema:2,weights:{},confirmed:{},sets:[],runs:[],completed:{},workouts:{},runSession:null,recovery:{end:0},timer:{remaining:90,end:0,running:false},recapSeen:{},skillMilestones:{},skillProgress:{},weeklyMissions:{},rest:90}; }
 export function migrate(input) {
   const state = Object.assign(freshState(), input || {});
   if (state.schema > 2) throw new Error('This backup needs a newer app version.');
   if(!state.skillMilestones||typeof state.skillMilestones!=='object'||Array.isArray(state.skillMilestones))state.skillMilestones={};
   if(!state.skillProgress||typeof state.skillProgress!=='object'||Array.isArray(state.skillProgress))state.skillProgress={};
+  if(!state.weeklyMissions||typeof state.weeklyMissions!=='object'||Array.isArray(state.weeklyMissions))state.weeklyMissions={};
   state.sets = state.sets.map((s,i)=>({...s,id:s.id || `legacy-set-${i}`,actualReps:s.actualReps ?? s.reps,targetReps:s.targetReps ?? s.reps,completed:s.completed ?? true}));
   state.runs = state.runs.map((r,i)=>({...r,id:r.id || `legacy-run-${i}`}));
   // Old prototype completion flags cannot prove a workout finished. Recompute from real sessions.
@@ -125,6 +126,7 @@ export function validateBackup(value){
   for(const [name,loads] of Object.entries(value.weights)){if(!Object.hasOwn(DEFAULTS,name)||!loads||STAGES.some(s=>!Number.isFinite(loads[s])||loads[s]<0))throw new Error('Invalid loads in backup.');}
   // Validate persisted sessions rather than trusting imported HTML or arbitrary executable text.
   const safe=migrate(value);
+  for(const [key,status] of Object.entries(safe.weeklyMissions))if(!/^(?:[0-9]|1[0-9]|2[0-6])$/.test(key)||!['achieved','in-progress','adjust'].includes(status))throw new Error('Invalid weekly mission in backup.');
   for(const [key,item] of Object.entries(safe.skillProgress)){if(!['pullup','muscleup','rope','climb','deadlift','carry','grip','run'].includes(key)||!item||!Number.isInteger(item.level)||item.level<0||item.level>3||!item.checks||typeof item.checks!=='object'||Object.entries(item.checks).some(([i,v])=>!['0','1'].includes(i)||typeof v!=='boolean'))throw new Error('Invalid skill progression in backup.');}
   if(Object.entries(safe.skillMilestones).some(([key,flag])=>!['pullup','muscleup','rope','climb','deadlift','carry','grip','run'].includes(key)||typeof flag!=='boolean'))throw new Error('Invalid skill milestones in backup.');
   for(const [day,w] of Object.entries(safe.workouts))if(!dayPattern.test(day)||!w||!Array.isArray(w.items)||w.items.some(n=>!Object.hasOwn(DEFAULTS,n))||!Number.isInteger(w.index)||w.index<0||w.index>w.items.length||!Number.isInteger(w.stage)||w.stage<0||w.stage>2||!Number.isInteger(w.round)||w.round<1||w.round>3||!Number.isFinite(w.extra))throw new Error('Invalid workout in backup.');
