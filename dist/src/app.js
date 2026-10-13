@@ -16,6 +16,10 @@ const campaignDay=()=>{const d=new Date();return Math.floor((Date.UTC(d.getFullY
 const weekDates=i=>{const dt=n=>new Date(Date.UTC(2026,9,13+i*7+n)).toLocaleDateString(undefined,{month:'short',day:'numeric',timeZone:'UTC'});return dt(0)+' – '+dt(6);};
 const DAILY_SKILL={0:'Rock climbing technique or gentle mobility only',1:'Pulling strength · existing IRON ladder',2:'Pushing strength · existing IRON ladder',3:'Optional light deadlift technique OR farmer\'s carry; swap, do not stack',4:'Core control · existing IRON ladder',5:'Optional low rope technique with coach; no legless climbing yet',6:'Supported pull-up technique; no explosive muscle-up attempts'};
 
+let voiceOn=false,voiceReady=false,lastRunSegment='',lastRecoveryEnd=0,lastTimerRunning=false;
+function say(message){if(!voiceOn||!voiceReady||!('speechSynthesis' in window))return;try{speechSynthesis.cancel();const u=new SpeechSynthesisUtterance(message);u.rate=1.03;u.volume=1;speechSynthesis.speak(u);}catch(e){console.warn('Voice unavailable',e);}}
+function cueRun(r){if(!r||!r.end||r.done)return;const seg=r.choice.segments[r.seg][0],key=r.id+':'+r.round+':'+r.seg;if(key===lastRunSegment)return;lastRunSegment=key;say(seg==='Shuttle out / back'?'Run to your marker, turn around, and run back.':seg==='Walk recovery'?'Walk. Recover.':seg==='Easy jog'||seg==='Jog'?'Jog now.':seg==='Walk'||seg==='Easy walk'?'Walk now.':seg==='Gentle mobility'?'Gentle mobility now.':seg);}
+function startVoice(){if(!('speechSynthesis' in window)){notice('Speech not supported in this browser');return;}voiceOn=true;voiceReady=true;say('Voice coach enabled. Keep this app awake for spoken cues.');}
 function notice(text){$('toast').textContent=text;$('toast').style.display='block';clearTimeout(toastId);toastId=setTimeout(()=>$('toast').style.display='none',2500);}
 function markRecap(date){recapDay=date;db.recapSeen[date]=true;page='RECAP';}
 function render(){
@@ -58,6 +62,7 @@ function render(){
     out=`<div class="stack"><div class="bubble recap" style="text-align:center;border:1px solid #ffffffdb;box-shadow:0 0 26px #ffffff36,inset 0 0 20px #8a62cb25"><div class="eyebrow">✝ TRIAL · POLAR BEAR ✝</div><div class="big" style="font-family:Georgia,serif;letter-spacing:2px">DAILY RECAP</div><div class="muted">${C.dayDate(recapDay).toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric',year:'numeric'})} · 10 PM CHECK-IN</div><div class="big emphasis">${r.complete?'✦ DAY COMPLETE ✦':C.profile(recapDay).items.length===0?'RECOVERY DAY':'TODAY’S TRAINING'}</div><div class="grid" style="margin:15px 0"><div><div class="big">${r.sets.length}</div><div class="muted">Sets logged</div></div><div><div class="big">${r.runs.length}</div><div class="muted">Movement sessions</div></div></div><div class="eyebrow" style="text-align:left;margin:17px 0 6px">STRENGTH · ${r.reps} ACTUAL REPS</div>${Object.keys(groups).length?Object.entries(groups).map(([name,arr])=>`<div style="text-align:left;border-top:1px solid #ffffff35;padding:9px 0"><strong>${esc(name)}</strong><div class="hint">${arr.length} sets · ${arr.reduce((a,s)=>a+s.actualReps,0)} reps total</div><div class="hint">${arr.map(s=>`${s.actualReps} × ${s.weight} lb${name==='Assisted Pull-up'?' assistance':''} (${s.stage}, R${s.round})`).join(' · ')}</div></div>`).join(''):'<div class="muted">No strength sets logged.</div>'}<div class="eyebrow" style="text-align:left;margin:16px 0 6px">RUN / WALK / SHUTTLES</div>${r.runs.length?r.runs.map(s=>`<div style="text-align:left;border-top:1px solid #ffffff35;padding:9px 0"><strong>${esc(s.name)}</strong><div class="hint">${s.completedIntervals ?? 'Not recorded'} intervals · ${Number.isFinite(s.durationSeconds)?duration(s.durationSeconds):'Time not recorded'} · ${s.completed?'Completed':'Partial'}</div></div>`).join(''):'<div class="muted">No movement session saved.</div>'}<div class="muted" style="margin-top:12px">Recorded movement time: ${duration(r.movementSeconds)}</div><div class="eyebrow" style="margin-top:15px">ONE DAY STRONGER · KEEP SHOWING UP</div></div><div class="actions">${button('‹ PREVIOUS DAY','recap:previous')}${button('NEXT DAY ›','recap:next','',recapDay>=d)}</div>${button('BACK TO HOME','view:HOME')}</div>`;
   }
   if(page==='TIMER')out=`<div class="stack">${card(`<div class="eyebrow">TIMER</div><div class="big" style="font-size:52px;text-align:center;margin:25px 0" id="timer-clock">${time(C.timerRemaining(db))}</div><div class="actions">${[30,60,90,120].map(v=>button(`${v}s`,`timer:set:${v}`)).join('')}</div><div class="actions">${button(db.timer.running?'PAUSE':'START','timer:toggle','primary')}${button('RESET','timer:reset')}${button('+ 30 SEC','timer:more')}</div>`)}</div>`;
+  if(page==='HOME'||page==='RUNNING'||page==='RECOVERY'||page==='TIMER')out+=card(`<div class="eyebrow">VOICE COACH · OPTIONAL</div><p class="hint">Spoken rest and interval cues. iPhone browsers can suspend speech when the screen locks or the app is in the background. Keep this page open and the screen awake for reliable cues; use a phone alarm/watch for critical timing.</p>${button(voiceOn?'🔊 VOICE ON · TAP TO MUTE':'🔈 ENABLE VOICE CUES','voice:toggle')}${button('▶ TEST VOICE','voice:test')}`);
   $('page').innerHTML=out;$('page').setAttribute('aria-label',page);
   $('nav').innerHTML=['HOME','IRON','SKILLS','MISSIONS','RUNNING','RECOVERY','PROGRESS','CALENDAR','TIMER'].map(n=>button(n,`view:${n}`,page===n?'current':'')).join('');
   $('nav').querySelector('.current')?.setAttribute('aria-current','page');
@@ -85,20 +90,22 @@ async function act(action){
         else if(cmd==='reset'&&window.confirm('Reset this skill progression back to the first stage?')){record.level=0;record.checks={};db.skillMilestones[key]=false;notice('SKILL PROGRESSION RESET');}
       }
     }
+    else if(action==='voice:toggle'){if(voiceOn){voiceOn=false;speechSynthesis?.cancel();notice('VOICE COACH MUTED');}else startVoice();}
+    else if(action==='voice:test'){if(!voiceOn)startVoice();else say('Test. Walk. Run. Recovery complete.');}
     else if(action==='log'){if(C.logSet(db,d)){page=C.workout(db,d).done?'PROGRESS':'RECOVERY';notice(C.workout(db,d).done?'STRENGTH COMPLETE ✨':'SET SAVED · RECOVER');}}
     else if(action==='confirm'){C.confirmLoad(db,d);notice('LOAD CONFIRMED');}
     else if(action.startsWith('rep:'))C.adjustRep(db,d,Number(action.split(':')[1]));
     else if(action.startsWith('weight:'))C.adjustWeight(db,d,Number(action.split(':')[1]));
-    else if(action==='recover'){if(!db.recovery.end)C.moreRest(db);page='RECOVERY';}
+    else if(action==='recover'){if(!db.recovery.end)C.moreRest(db);page='RECOVERY';if(db.recovery.end){lastRecoveryEnd=db.recovery.end;say('Recovery timer started.');}}
     else if(action==='ready'){C.ready(db);page='IRON';}
-    else if(action==='rest')C.moreRest(db);
+    else if(action==='rest'){C.moreRest(db);lastRecoveryEnd=db.recovery.end;say('More recovery time added.');}
     else if(action==='stop'){if(!window.confirm('Save and exit this workout? Your ladder progress will remain available to resume.'))return;C.stopWorkout(db,d);page='IRON';notice('WORKOUT PAUSED · PROGRESS SAVED');}
      else if(action==='resume'){C.resumeWorkout(db,d);page='IRON';notice('WORKOUT RESUMED · CONTINUE YOUR LADDER');}
     else if(action==='run:new'){C.ensureRun(db,d);page='RUNNING';}
-    else if(action==='run:toggle')C.toggleRun(db);
+    else if(action==='run:toggle'){C.toggleRun(db);if(db.runSession?.end){lastRunSegment='';cueRun(db.runSession);}else say('Running paused.');}
     else if(action==='run:more')C.moreRun(db);
     else if(action==='run:save'){if(C.finishRun(db)){page='PROGRESS';notice('MOVEMENT SAVED ✨');}else notice('Start moving before saving a session.');}
-    else if(action==='timer:toggle')C.toggleTimer(db);
+    else if(action==='timer:toggle'){C.toggleTimer(db);say(db.timer.running?'Timer started.':'Timer paused.');}
     else if(action==='timer:reset')C.setTimer(db);
     else if(action==='timer:more')C.addTimer(db);
     else if(action.startsWith('timer:set:'))C.setTimer(db,Number(action.split(':')[2]));
@@ -116,9 +123,9 @@ async function tick(){if(!db || ticking || busy)return;ticking=true;try{
   $('clock').textContent=new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'});
   let changed=false,rerender=false;
   if(day()!==lastDay){lastDay=day();calendarMonth=new Date();changed=true;rerender=true;}
-  if(C.advanceRun(db)){changed=true;rerender=true;if(db.runSession?.done)notice('INTERVALS COMPLETE · FINISH / SAVE');}
-  if(C.tickTimer(db)){changed=true;rerender=true;notice('TIMER COMPLETE');}
-  if(db.recovery.end && Date.now()>=db.recovery.end){db.recovery.end=0;changed=true;notice('READY WHEN YOU ARE');}
+  if(C.advanceRun(db)){changed=true;rerender=true;if(db.runSession?.done){say('Intervals finished.');notice('INTERVALS COMPLETE · FINISH / SAVE');}else cueRun(db.runSession);}
+  if(C.tickTimer(db)){changed=true;rerender=true;say('Timer finished.');notice('TIMER COMPLETE');}
+  if(db.recovery.end && Date.now()>=db.recovery.end){db.recovery.end=0;changed=true;say('Recovery timer finished. Ready when you are.');notice('READY WHEN YOU ARE');}
   if(C.recapDue(db)){markRecap(day());changed=true;rerender=true;}
   if(changed)await persist();if(rerender)render();
   if($('timer-clock'))$('timer-clock').textContent=time(C.timerRemaining(db));
