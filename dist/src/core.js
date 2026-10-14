@@ -7,12 +7,12 @@ export function localDay(date = new Date()) {
 export function dayDate(day) { return new Date(`${day}T12:00:00`); }
 const PROFILES = [
   {focus:'SUNDAY · FIELD RUN WITH DOGS',primary:'Field running',secondary:'',items:[],roundsPerItem:[]},
-  {focus:'BACK + LEGS',primary:'Back',secondary:'Legs',items:['Lat Pulldown','Low Row','Rear Delt Fly','Leg Press'],roundsPerItem:[1,1,1,1]},
-  {focus:'ARMS + ABS',primary:'Arms',secondary:'Abs',items:['Biceps Curl','Hammer Curl','Triceps Pressdown','Cable Crunch'],roundsPerItem:[1,1,1,1]},
-  {focus:'SHOULDERS + BACK',primary:'Shoulders',secondary:'Back',items:['Lateral Raise','Rear Delt Fly','Lat Pulldown'],roundsPerItem:[1,1,1]},
-  {focus:'ABS + CHEST',primary:'Abs & Core',secondary:'Chest',items:['Cable Crunch','Pallof Press','Dead Bug','Chest Press'],roundsPerItem:[1,1,1,1]},
-  {focus:'LEGS + ARMS',primary:'Legs',secondary:'Arms',items:['Leg Press','Leg Curl','Leg Extension','Calf Raise','Biceps Curl'],roundsPerItem:[1,1,1,1,1]},
-  {focus:'CHEST + TECHNIQUE + ABS',primary:'Chest & Technique',secondary:'Abs',items:['Chest Press','Incline Press','Assisted Pull-up','Dead Bug'],roundsPerItem:[1,1,1,1]}
+  {focus:'BACK + LEGS',primary:'Back',secondary:'Legs',items:['Lat Pulldown','Low Row','Rear Delt Fly','Leg Press'],roundsPerItem:[2,2,1,1]},
+  {focus:'ARMS + ABS',primary:'Arms',secondary:'Abs',items:['Biceps Curl','Hammer Curl','Triceps Pressdown','Cable Crunch'],roundsPerItem:[2,2,2,1]},
+  {focus:'SHOULDERS + BACK',primary:'Shoulders',secondary:'Back',items:['Lateral Raise','Rear Delt Fly','Lat Pulldown'],roundsPerItem:[2,2,1]},
+  {focus:'ABS + CHEST',primary:'Abs & Core',secondary:'Chest',items:['Cable Crunch','Pallof Press','Dead Bug','Chest Press'],roundsPerItem:[2,2,2,1]},
+  {focus:'LEGS + ARMS',primary:'Legs',secondary:'Arms',items:['Leg Press','Leg Curl','Leg Extension','Calf Raise','Biceps Curl'],roundsPerItem:[2,2,1,1,1]},
+  {focus:'CHEST + TECHNIQUE + ABS',primary:'Chest & Technique',secondary:'Abs',items:['Chest Press','Incline Press','Assisted Pull-up','Dead Bug'],roundsPerItem:[2,2,1,1]}
 ];
 export function profile(day) { return structuredClone(PROFILES[dayDate(day).getDay()]); }
 export const DEFAULTS = {'Lat Pulldown':{easy:55,master:70,challenge:80},'Low Row':{easy:40,master:55,challenge:65},'Chest Press':{easy:20,master:25,challenge:30},'Incline Press':{easy:15,master:20,challenge:25},'Lateral Raise':{easy:5,master:8,challenge:10},'Rear Delt Fly':{easy:5,master:8,challenge:10},'Biceps Curl':{easy:10,master:15,challenge:20},'Hammer Curl':{easy:10,master:15,challenge:20},'Triceps Pressdown':{easy:15,master:20,challenge:25},'Cable Crunch':{easy:15,master:20,challenge:25},'Pallof Press':{easy:10,master:12,challenge:15},'Dead Bug':{easy:0,master:0,challenge:0},'Assisted Pull-up':{easy:150,master:145,challenge:140},'Leg Press':{easy:90,master:110,challenge:130},'Leg Curl':{easy:20,master:30,challenge:40},'Leg Extension':{easy:40,master:50,challenge:60},'Calf Raise':{easy:20,master:30,challenge:40}};
